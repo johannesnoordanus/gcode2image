@@ -6,7 +6,8 @@ Images can be shown with axes to check laser cutter (CNC) start coordinates and 
 gcode2image can be used alongside grblhud.py, image2gcode.py and svg2gcode.py for a commandline driven workflow. (https://github.com/johannesnoordanus/grblhud, https://github.com/johannesnoordanus/image2gcode and https://github.com/johannesnoordanus/svg2gcode resp.)
 
 ### Install:
-Download 'gcode2image.py' and 'install' to a directory within ```$PATH``` (or within python path).
+Depends on python libraries numpy, PIL, skimage and mathplot (pip install ..). </br>
+Download 'gcode2image.py' and 'install' to a directory within ```$PATH``` (or within python path).</br>
 Then:
 ```
 > cd <above dir>
