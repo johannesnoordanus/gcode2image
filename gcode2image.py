@@ -21,10 +21,10 @@ def gcode2image(args) -> np.array:
 
     # set args
     gcode = args.gcode
-    G0_gray = 60 if args.showG0 else 0
+    G0_gray = 100 if args.showG0 else 0
 
-    X_pattern = "X[0-9]+\.[0-9]+"
-    Y_pattern = "Y[0-9]+\.[0-9]+"
+    X_pattern = "X[0-9]+(\.[0-9]+)?"
+    Y_pattern = "Y[0-9]+(\.[0-9]+)?"
     S_pattern = "S[0-9]+"
 
     gcode_pattern = "^(G0|G1|X|Y|M4|M3|M5|M2|S)"
@@ -179,12 +179,12 @@ def gcode2image(args) -> np.array:
                 # exit at EOF
                 break
             if re.search(gcode_pattern, line):
-                X = re.search("X[0-9]+\.[0-9]+",line)
+                X = re.search(X_pattern,line)
                 if X:
                     X = float(X.group(0)[1:])
                     min_max['min_X'] = X if not min_max['min_X'] or X < min_max['min_X'] else min_max['min_X']
                     min_max['max_X'] = X if not min_max['max_X'] or X > min_max['max_X'] else min_max['max_X']
-                Y = re.search("Y[0-9]+\.[0-9]+",line)
+                Y = re.search(Y_pattern,line)
                 if Y:
                     Y = float(Y.group(0)[1:])
                     min_max['min_Y'] = Y if not min_max['min_Y'] or Y < min_max['min_Y'] else min_max['min_Y']
