@@ -31,5 +31,6 @@ options:
   --showG0       show G0 moves
   --offset       show image offset
   --flip         flip image updown
+  --grid         show a grid 10mm wide
   -V, --version  show version number and exit
 ```
