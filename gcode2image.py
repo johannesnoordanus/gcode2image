@@ -21,7 +21,7 @@ def gcode2image(args) -> np.array:
 
     # set args
     gcode = args.gcode
-    G0_gray = 100 if args.showG0 else 0
+    G0_gray = 210 if args.showG0 else 0
 
     X_pattern = "X[0-9]+(\.[0-9]+)?"
     Y_pattern = "Y[0-9]+(\.[0-9]+)?"
@@ -44,7 +44,7 @@ def gcode2image(args) -> np.array:
         nonlocal S_current
 
         if X != x or Y != y:
-            if M3_mode or M4_mode:
+            if M3_mode or M4_mode or G0_gray:
                 # draw line
                 yy, xx = drawline(y - Y_start,x - X_start, Y - Y_start, X - X_start)
                 if  X > x or Y > y:
@@ -222,6 +222,13 @@ def gcode2image(args) -> np.array:
     # init image
     image = np.full([img_height - Y_start + 1, img_width - X_start + 1], 255, dtype=np.uint8)
 
+    # init grid if needed
+    if args.grid:
+        # make grid
+        for i in range(100,image.shape[1] if image.shape[1] >= image.shape[0] else image.shape[0],100):
+            image[i:i+1,:] = 180
+            image[:,i:i+1] = 180
+
     # init modes (gcode)
     M4_mode = False
     M3_mode = False
@@ -251,27 +258,29 @@ def main() -> int:
     parser.add_argument('--showG0', action='store_true', default=False, help='show G0 moves' )
     parser.add_argument('--offset', action='store_true', default=False, help='show image offset' )
     parser.add_argument('--flip', action='store_true', default=False, help='flip image updown' )
+    parser.add_argument('--grid', action='store_true', default=False, help='show a grid 10mm wide' )
     parser.add_argument('-V', '--version', action='version', version='%(prog)s ' + __version__, help="show version number and exit")
     args = parser.parse_args()
 
     # convert to narray
     img = gcode2image(args)
 
-    # convert to image
     if args.flip or args.showaxes:
         if not args.flip:
             print("Warning: option '--showaxes' always flips the image")
         # flip it
         img = np.flipud(img)
+
+    # convert to image
     pic = Image.fromarray(img)
 
     if args.showaxes:
         if args.showimage:
             print("Warning: option '--showaxes' overrides '--showimage'")
-        r = 10
 
+        pixels_per_mm = 10
         fig, ax = plt.subplots()
-        ax.imshow(img, cmap='gray', extent=(0,img.shape[1]/r,0,img.shape[0]/r) )
+        ax.imshow(img, cmap='gray', extent=(0,img.shape[1]/pixels_per_mm,0,img.shape[0]/pixels_per_mm) )
         ax.set_xlabel("distance [mm/pixel]")
         ax.set_ylabel("distance [mm/pixel]")
 
