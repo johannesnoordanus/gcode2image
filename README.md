@@ -1,22 +1,20 @@
 # gcode2image
 
 Convert gcode to pixel exact image files.
-Images can be shown with axes to check laser cutter (CNC) start coordinates and image parameters.
+Images can be shown with axes and grid to check laser cutter (CNC) start coordinates and image parameters.
 
-gcode2image can be used alongside grblhud.py, image2gcode.py and svg2gcode.py for a commandline driven workflow. (https://github.com/johannesnoordanus/grblhud, https://github.com/johannesnoordanus/image2gcode and https://github.com/johannesnoordanus/svg2gcode resp.)
+gcode2image can be used alongside *grblhud*, *image2gcode* and *svg2gcode* for a commandline driven workflow. (https://github.com/johannesnoordanus/.)
 
 ### Install:
-Depends on python libraries numpy, PIL, skimage and mathplot (pip install ..). </br>
-Download 'gcode2image.py' and 'install' to a directory within ```$PATH``` (or within python path).</br>
-Then:
+Depends on python libraries numpy, PIL, skimage and mathplot *pip install ..*. </br>
 ```
-> cd <above dir>
-> chmod u+x gcode2image.py    # to make it executable; thats it!
+> 
+> pip install gcode2image
 ```
 ### Usage:
 ```
-> python3 gcode2image.py --help
-usage: gcode2image.py [-h] [--showimage] [--showaxes] [--showG0] [--offset] [--flip] [-V] gcode image
+> gcode2image --help
+usage: gcode2image [-h] [--showimage] [--showaxes] [--showG0] [--offset] [--flip] [-V] gcode image
 
 Convert a gcode file to image.
 
