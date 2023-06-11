@@ -2,7 +2,7 @@
 """
 gcode2image: convert gode to image.
 """
-__version__ = "v1.0.0-beta"
+__version__ = "1.1.0"
 
 import sys
 import re
