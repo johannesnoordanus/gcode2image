@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-gcode2image: convert gode to image.
+gcode2image: convert gcode to image.
 """
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 import sys
 import re
