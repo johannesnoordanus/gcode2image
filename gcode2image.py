@@ -2,7 +2,7 @@
 """
 gcode2image: convert gcode to image.
 """
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 import sys
 import re
@@ -240,8 +240,8 @@ def gcode2image(args) -> np.array:
         y = Y_start
 
     # set image dimensions
-    img_height = round(abs((min_max['max_Y'] - min_max['min_Y']))/pixelsize)
-    img_width = round(abs((min_max['max_X'] - min_max['min_X']))/pixelsize)
+    img_height = abs(round(min_max['max_Y']/pixelsize) - round(min_max['min_Y']/pixelsize))
+    img_width = abs(round(min_max['max_X']/pixelsize) - round(min_max['min_X']/pixelsize))
 
     # set max S value (calibrate)
     S_max = float(min_max['max_S'])
