@@ -18,7 +18,7 @@ dependencies = [
     "matplotlib >= 3.7.1",
 ]
 
-requires-python = ">=3.10.6"
+requires-python = ">=3.7"
 
 [project.scripts]
 gcode2image = "gcode2image:main"
