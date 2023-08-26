@@ -2,7 +2,7 @@
 """
 gcode2image: convert gcode to image.
 """
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 
 import sys
 import re
@@ -38,10 +38,10 @@ def gcode2image(args) -> np.array:
         """
         Make range fit within window
         """
-        dYmin = round(dY/pixelsize) if round(dY/pixelsize)-ra < 0 else round(dY/pixelsize)-ra
-        dYplus = round(dY/pixelsize) if round(dY/pixelsize)+ra > img_height else round(dY/pixelsize)+ra
-        dXmin = round(dX/pixelsize) if round(dX/pixelsize)-ra < 0 else round(dX/pixelsize)-ra
-        dXplus = round(dX/pixelsize) if round(dX/pixelsize)+ra > img_width else round(dX/pixelsize)+ra
+        dYmin = round(dY/pixelsize) if round(dY/pixelsize)-int(ra) < 0 else round(dY/pixelsize)-int(ra)
+        dYplus = round(dY/pixelsize) if round(dY/pixelsize)+int(ra) > img_height else round(dY/pixelsize)+int(ra)
+        dXmin = round(dX/pixelsize) if round(dX/pixelsize)-int(ra) < 0 else round(dX/pixelsize)-int(ra)
+        dXplus = round(dX/pixelsize) if round(dX/pixelsize)+int(ra) > img_width else round(dX/pixelsize)+int(ra)
 
         return (dYmin, dYplus, dXmin, dXplus)
 
@@ -237,7 +237,7 @@ def gcode2image(args) -> np.array:
     img_min_X = gc_info['min_X']
     img_min_Y = gc_info['min_Y']
 
-    if args.showOrigin:
+    if args.showorigin:
         # set possibly new lower left upper right for image to include the origin
         gc_info['min_X'] = 0 if 0 < gc_info['min_X'] else gc_info['min_X']
         gc_info['max_X'] = 0 if 0 > gc_info['max_X'] else gc_info['max_X']
@@ -270,49 +270,7 @@ def gcode2image(args) -> np.array:
     # init image
     image = np.full([img_height + 1, img_width + 1], 255, dtype=np.uint8)
 
-    print(f"image pixel size: {image.shape[1] - 1}x{image.shape[0] - 1} (WidthxHeight)")
-
-    # show grid if requested
-    if args.grid:
-        # make grid 10mm x 10mm
-        for i in range(round(10/pixelsize),image.shape[1] if image.shape[1] >= image.shape[0] else image.shape[0],round(10/pixelsize)):
-            image[i:i+1,:] = 180
-            image[:,i:i+1] = 180
-
-    # show origin if requested
-    if args.showOrigin:
-        line_width_factor = max(round(.00053 * image.shape[1]),1)
-
-        # calculate origin
-        dX = -img_min_X if min(0.0, img_min_X) != 0.0 else 0.0
-        dY = -img_min_Y if min(0.0, img_min_Y) != 0.0 else 0.0
-
-        # get the right pixel ranges to keep within array borders
-        ra8 = pixel_range(8 * line_width_factor, dY, dX, pixelsize, img_height, img_width)
-        # show origin
-        image[ra8[0]:ra8[1], ra8[2]:ra8[3]] = 100
-
-        # get pixel range of X/Y-axis lines
-        ra2 = pixel_range(2 * line_width_factor, dY, dX, pixelsize, img_height, img_width)
-
-        # draw X/Y axis lines
-        image[ra2[0]:ra2[1],0:img_width] = 100
-        image[0:img_height,ra2[2]:ra2[3]] = 100
-
-        # draw X-axis line markers
-        for i in range(0,round(img_width/pixelsize), 10):
-            #image[dYmin8:dYplus8,i] = 0
-            ra = pixel_range(2 * line_width_factor, 0, i, pixelsize, img_height, img_width)
-            iXmin = ra[2]
-            iXplus = ra[3]
-            image[ra8[0]:ra8[1],iXmin:iXplus] = 100
-
-        # draw Y-axis line markers
-        for i in range(0,round(img_height/pixelsize), 10):
-            ra = pixel_range(2 * line_width_factor, i, 0, pixelsize, img_height, img_width)
-            iYmin = ra[0]
-            iYplus = ra[1]
-            image[iYmin:iYplus,ra8[2]:ra8[3]] = 100
+    print(f"image pixels: {image.shape[1] - 1} x {image.shape[0] - 1} (WidthxHeight)")
 
     # init modes (gcode)
     M4_mode = False
@@ -324,9 +282,55 @@ def gcode2image(args) -> np.array:
     S_current = None
 
     # second pass: draw image lines
-    # until EOF
     gcode.seek(0)
     parse_lines()
+    # calculate origin
+    dX = -img_min_X if min(0.0, img_min_X) != 0.0 else 0.0
+    dY = -img_min_Y if min(0.0, img_min_Y) != 0.0 else 0.0
+
+    # show grid if requested
+    if args.grid:
+        # make grid 10mm x 10mm
+
+        # draw grid X lines
+        for i in range(round((dX%10)/pixelsize), image.shape[1], round(10/pixelsize)):
+            image[:,i:i+1] = 180
+        # draw grid Y lines
+        for i in range(round((dY%10)/pixelsize), image.shape[0], round(10/pixelsize)):
+            image[i:i+1,:] = 180
+
+    # show origin if requested
+    if args.showorigin:
+        # calibrate line width
+        line_width_factor = max(round(.00053 * image.shape[1]),1)
+
+        # get the right pixel ranges to keep within array borders
+        ra8 = pixel_range(4 * line_width_factor, dY, dX, pixelsize, img_height, img_width)
+
+        # show origin
+        image[ra8[0]:ra8[1], ra8[2]:ra8[3]] = 100
+
+        # get pixel range of X/Y-axis lines
+        ra2 = pixel_range(1.5 * line_width_factor, dY, dX, pixelsize, img_height, img_width)
+
+        # draw X/Y axis lines
+        image[ra2[0]:ra2[1],0:img_width] = 100
+        image[0:img_height,ra2[2]:ra2[3]] = 100
+
+        # draw X-axis line markers
+        for i in range(0,round(img_width/pixelsize), 10):
+            #image[dYmin8:dYplus8,i] = 0
+            ra = pixel_range(2 * line_width_factor, dY, i + (dX%10), pixelsize, img_height, img_width)
+            iXmin = ra[2]
+            iXplus = ra[3]
+            image[ra8[0]:ra8[1],iXmin:iXplus] = 100
+
+        # draw Y-axis line markers
+        for i in range(0,round(img_height/pixelsize), 10):
+            ra = pixel_range(2 * line_width_factor, i + (dY%10), dX, pixelsize, img_height, img_width)
+            iYmin = ra[0]
+            iYplus = ra[1]
+            image[iYmin:iYplus,ra8[2]:ra8[3]] = 100
 
     return image
 
@@ -342,10 +346,10 @@ def main() -> int:
     parser.add_argument('gcode', type=argparse.FileType('r'), default = sys.stdin, help='name of gcode file to convert')
     parser.add_argument('image', type=argparse.FileType('w'), help='image out')
     parser.add_argument('--resolution', default=pixelsize_default, metavar=f"<default: {DEFAULT_RESOLUTION}>",
-        type=float, help="define image resolution by pixel size (in mm^2): each image pixel is drawn this size")
+        type=float, help="define image resolution by pixel size (mm^2)")
     parser.add_argument('--showimage', action='store_true', default=False, help='show b&w converted image' )
     parser.add_argument('--showG0', action='store_true', default=False, help='show G0 moves' )
-    parser.add_argument('--showOrigin', action='store_true', default=False, help='show image origin (0,0)' )
+    parser.add_argument('--showorigin', action='store_true', default=False, help='show image origin (0,0)' )
     parser.add_argument('--flip', action='store_true', default=False, help='flip image updown' )
     parser.add_argument('--grid', action='store_true', default=False, help='show a grid 10mm wide' )
     parser.add_argument('-V', '--version', action='version', version='%(prog)s ' + __version__, help="show version number and exit")
