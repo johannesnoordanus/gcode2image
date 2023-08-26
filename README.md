@@ -14,7 +14,7 @@ Depends on python libraries numpy, PIL and skimage.
 ### Usage:
 ```
 $ gcode2image --help
-usage: gcode2image [-h] [--resolution <default: 0.1>] [--showimage] [--showG0] [--showOrigin] [--flip] [--grid] [-V] gcode image
+usage: gcode2image [-h] [--resolution <default: 0.1>] [--showimage] [--showG0] [--showorigin] [--flip] [--grid] [-V] gcode image
 
 Convert a gcode file to image.
 
@@ -28,7 +28,7 @@ options:
                         define image resolution by pixel size (in mm^2): each image pixel is drawn this size
   --showimage           show b&w converted image
   --showG0              show G0 moves
-  --showOrigin          show image origin (0,0)
+  --showorigin          show image origin (0,0)
   --flip                flip image updown
   --grid                show a grid 10mm wide
   -V, --version         show version number and exit
