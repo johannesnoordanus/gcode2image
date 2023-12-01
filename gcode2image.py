@@ -405,7 +405,6 @@ def main() -> int:
 
     # convert to narray
     img = gcode2image(args)
-    print(img)
 
     if args.flip:
         # flip it
