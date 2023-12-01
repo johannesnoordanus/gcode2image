@@ -2,7 +2,7 @@
 """
 gcode2image: convert gcode to image.
 """
-__version__ = "2.3.0"
+__version__ = "2.3.1"
 
 import sys
 import re
