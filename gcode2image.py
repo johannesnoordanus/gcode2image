@@ -14,6 +14,9 @@ import numpy as np
 # set to 10 pixels per mm
 DEFAULT_RESOLUTION = .1
 
+# max_laser_power
+DEFAULT_MAX_LASER_POWER = 255
+
 def gcode2image(args) -> np.array:
     """
     Convert gcode to array using header info from .gc(ode) file.
@@ -22,7 +25,6 @@ def gcode2image(args) -> np.array:
 
     # set args
     gcode = args.gcode
-    G0_gray = 210 if args.showG0 else 0
 
     float_pattern = "[+\-]?[0-9]+(\.[0-9]+)?"
 
@@ -30,7 +32,7 @@ def gcode2image(args) -> np.array:
     Y_pattern = f"Y{float_pattern}"
     S_pattern = "S[0-9]+"
 
-    gcode_pattern = "^(G0|G1|X|Y|M4|M3|M5|M2|S)"
+    gcode_pattern = "^(G0|G00|G1|X|Y|M4|M3|M5|M2|S)"
 
     invert_intensity = True
 
@@ -46,9 +48,9 @@ def gcode2image(args) -> np.array:
         return (dYmin, dYplus, dXmin, dXplus)
 
     def pixel_intensity(S: int = None) -> int:
-        # S_max (max laser power)
+        # max_laser_power
         # pixel intensity (inverse) proportional to laser power
-        return round((1.0 - float(S/S_max)) * 255) if invert_intensity else round(float(S/S_max) * 255)
+        return round((1.0 - float(S/max_laser_power)) * 255) if invert_intensity else round(float(S/max_laser_power) * 255)
 
     def draw_line(X: int, Y: int, S: int = None):
         nonlocal x
@@ -58,7 +60,7 @@ def gcode2image(args) -> np.array:
         nonlocal S_current
 
         if X != x or Y != y:
-            if M3_mode or M4_mode or G0_gray:
+            if (G1_mode and (M3_mode or M4_mode)) or (G0_mode and G0_gray):
                 # draw line
                 yy, xx = drawline(y - Y_start,x - X_start, Y - Y_start, X - X_start)
                 if  X > x or Y > y:
@@ -178,13 +180,16 @@ def gcode2image(args) -> np.array:
                     parse_M(line)
                 elif 'S' in line:
                     parse_S(line)
+                elif 'Z' in line:
+                    print(f"Error: Z-coordinates are unsupported (images are 2-D), line: {line}, exit ...")
+                    sys.exit(1)
                 elif 'M2' in line:
                     # program end: stop
                     break
 
     def get_gcode_info():
         nonlocal gcode
-        gc_info = { 'min_X': None, 'min_Y': None, 'max_X': None, 'max_Y': None, 'max_S': None, 'pixelsize': None }
+        gc_info = { 'min_X': None, 'min_Y': None, 'max_X': None, 'max_Y': None, 'max_S': None, 'pixelsize': None, 'M': None, 'max_laser_power': None }
 
         while True:
             line = gcode.readline()
@@ -209,6 +214,10 @@ def gcode2image(args) -> np.array:
                     S = float(S.group(0)[1:])
                     gc_info['max_S'] = S if not gc_info['max_S'] or S > gc_info['max_S'] else gc_info['max_S']
 
+                M = re.search("M[34]+",line)
+                if M:
+                    gc_info['M'] = True
+
             if line.find("pixelsize") >= 0:
                 # find a line that starts with ';' followed by 'pixelsize' (possibly a ':'), one or more spaces and a float
                 pixelsize = re.search(f"^;.*pixelsize:? +{float_pattern}", line)
@@ -216,11 +225,27 @@ def gcode2image(args) -> np.array:
                     pixelsize = re.search(f"pixelsize:? +{float_pattern}", pixelsize.group()).group()
                     gc_info['pixelsize'] = float(re.search(f"{float_pattern}", pixelsize).group())
 
+            if line.find("maximum_image_laser_power") >= 0:
+                # find a line that starts with ';' followed by 'pixelsize' (possibly a ':'), one or more spaces and a float
+                max_laser_power = re.search(f"^;.*maximum_image_laser_power:? +{float_pattern}", line)
+                if max_laser_power:
+                    max_laser_power = re.search(f"maximum_image_laser_power:? +{float_pattern}", max_laser_power.group()).group()
+                    gc_info['max_laser_power'] = float(re.search(f"{float_pattern}", max_laser_power).group())
+
         return gc_info
+
+    #
+    # gcode2image
+    #
 
     # first pass: find min max of coordinates and S value, find pixelsize
     gc_info = get_gcode_info()
 
+    if gc_info['min_X'] is None or gc_info['min_Y'] is None or gc_info['max_X'] is None or gc_info['max_Y'] is None:
+        print(f"Error: gcode file not well formed: missing move commands (X<nr> and or Y<nr> coordinates), exit ...")
+        sys.exit(1)
+
+    # handle resolution
     if args.resolution is not None:
         if gc_info['pixelsize'] and gc_info['pixelsize'] != args.resolution:
             print(f"Note: conflicting settings: option '--resolution' {args.resolution} differs from {gc_info['pixelsize']} found in '{args.gcode.name}'")
@@ -232,6 +257,30 @@ def gcode2image(args) -> np.array:
     else:
         print(f"pixelsize set to default {DEFAULT_RESOLUTION} (pixelsize is not set by option '--resolution' or found in '{args.gcode.name}')")
         pixelsize = DEFAULT_RESOLUTION
+
+    # handle pixel intensity
+    if args.maxintensity is not None:
+        max_laser_power = args.maxintensity
+    elif gc_info['max_laser_power']:
+        max_laser_power = gc_info['max_laser_power']
+        print(f"maxintensity is set to {max_laser_power} (found within '{args.gcode.name}')")
+    else:
+        max_S = gc_info['max_S']
+        if max_S and max_S > DEFAULT_MAX_LASER_POWER:
+            # self calibrate
+            max_laser_power = max_S
+        else:
+            max_laser_power = DEFAULT_MAX_LASER_POWER
+        print(f"maxintensity is set to {max_laser_power} (option '--maxintensity' is not supplied or found in '{args.gcode.name}')")
+
+    # handle missing G1 and M3(4) commands
+    M = gc_info['M']
+    max_S = gc_info['max_S']
+    if not (M and max_S):
+        print("Warning: gcode does not contain write movements and or writing mode 'M3(4)' commands: no image produced (use option --showG0 to see movements only)")
+
+    # set gray intensity
+    G0_gray = max_laser_power/5 if args.showG0 else 0
 
     # save image lower left
     img_min_X = gc_info['min_X']
@@ -264,12 +313,8 @@ def gcode2image(args) -> np.array:
     img_height = abs(round(gc_info['max_Y']/pixelsize) - round(gc_info['min_Y']/pixelsize))
     img_width = abs(round(gc_info['max_X']/pixelsize) - round(gc_info['min_X']/pixelsize))
 
-    # set max S value (calibrate)
-    S_max = float(gc_info['max_S'])
-
     # init image
     image = np.full([img_height + 1, img_width + 1], 255, dtype=np.uint8)
-
     print(f"image pixels: {image.shape[1] - 1} x {image.shape[0] - 1} (WidthxHeight)")
 
     # init modes (gcode)
@@ -340,6 +385,7 @@ def main() -> int:
     """
 
     pixelsize_default = None
+    max_laser_power_default = None
 
     # Define command line argument interface
     parser = argparse.ArgumentParser(description='Convert a gcode file to image.')
@@ -347,6 +393,8 @@ def main() -> int:
     parser.add_argument('image', type=argparse.FileType('w'), help='image out')
     parser.add_argument('--resolution', default=pixelsize_default, metavar=f"<default: {DEFAULT_RESOLUTION}>",
         type=float, help="define image resolution by pixel size (mm^2)")
+    parser.add_argument('--maxintensity', default=max_laser_power_default, metavar=f"<default: {DEFAULT_MAX_LASER_POWER}>",
+        type=float, help="set maximum intensity for this image, typically 'max laser power' of the source gcode file")
     parser.add_argument('--showimage', action='store_true', default=False, help='show b&w converted image' )
     parser.add_argument('--showG0', action='store_true', default=False, help='show G0 moves' )
     parser.add_argument('--showorigin', action='store_true', default=False, help='show image origin (0,0)' )
@@ -357,6 +405,7 @@ def main() -> int:
 
     # convert to narray
     img = gcode2image(args)
+    print(img)
 
     if args.flip:
         # flip it
