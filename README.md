@@ -18,6 +18,8 @@ This generates a 1 cm (per axis) grid and shows the origin X0Y0.
 
 *gcode2image* can be used alongside *grblhud*, *image2gcode* and *svg2gcode* for a commandline driven workflow. (https://github.com/johannesnoordanus/.)
 
+Please consider supporting me, so I can make this application better and add new functionality to it: <http://paypal.me/johannesnoordanus/5,00>
+
 ### Install:
 Depends on python libraries numpy, PIL and skimage.
 *pip install* takes care of that.
