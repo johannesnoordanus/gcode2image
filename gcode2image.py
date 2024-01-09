@@ -2,13 +2,12 @@
 """
 gcode2image: convert gcode to image.
 """
-__version__ = "2.3.2"
+__version__ = "2.4.0"
 
 import sys
 import re
 import argparse
 from PIL import Image
-from skimage.draw import line as drawline
 import numpy as np
 
 # set to 10 pixels per mm
@@ -36,6 +35,63 @@ def gcode2image(args) -> np.array:
 
     invert_intensity = True
 
+    def line_slope(p1: (int,int), p2: (int,int)):
+        """Calculate the slope of the line p1p2"""
+        x1, y1 = p1[0], p1[1]
+        x2, y2 = p2[0], p2[1]
+
+        if x1 == x2:
+            return 1
+
+        return (y1 - y2) / (x1 - x2)
+
+    def line_offset(p1: (int,int), p2: (int,int)):
+        """Calculate the offset of the line p1p2 from the origin"""
+        x1, y1 = p1[0], p1[1]
+
+        return y1 - line_slope(p1, p2) * x1
+
+    def line(x, slope, offset):
+        y = slope * x + offset
+        return round(y)
+
+    def draw(img, start: (int,int), end: (int,int), color):
+        slope = line_slope(start, end)
+        offset = line_offset(start, end)
+
+        #print(f"DRAW: start {start}, end {end}, color {color}")
+        if slope == 1 and ((start[0] - end[0]) != (start[1] - end[1])):
+            # vertical line (not a 45 degrees line)
+            diy = 1 if end[1] > start[1] else -1
+            for y2 in range(start[1], end[1] + diy, diy):
+                if img[y2,start[0]] != 255:
+                    img[y2,start[0]] = max(img[y2,start[0]] - color, 0)
+                else:
+                    img[y2,start[0]] = color
+        else:
+            # non vertical line
+            dix = 1 if end[0] > start[0] else -1
+            prev = start
+            for x in range(start[0], end[0] + dix, dix):
+                y = line(x,slope,offset)
+                if abs(y - prev[1]) > 1:
+                    di = 1 if y > prev[1] else -1
+                    for y1 in range(prev[1], y, di):
+                        #print("y1:",(x,y1))
+                        if img[y1,x] != 255:
+                            img[y1,x] = max(img[y1,x] - color, 0)
+                        else:
+                            img[y1,x] = color
+
+                if x != end[0]:
+                    if img[y,x] != 255:
+                        img[y,x] = max(img[y,x] - color, 0)
+                    else:
+                        img[y,x] = color
+                #print("draw:",(x,y))
+
+                prev = (x,y)
+
     def pixel_range(ra, dY, dX, pixelsize, img_height, img_width):
         """
         Make range fit within window
@@ -62,11 +118,7 @@ def gcode2image(args) -> np.array:
         if X != x or Y != y:
             if (G1_mode and (M3_mode or M4_mode)) or (G0_mode and G0_gray):
                 # draw line
-                yy, xx = drawline(y - Y_start,x - X_start, Y - Y_start, X - X_start)
-                if  X > x or Y > y:
-                    image[yy[:-1], xx[:-1]] = pixel_intensity(S if S is not None else G0_gray)
-                else:
-                    image[yy[1:], xx[1:]] = pixel_intensity(S if S is not None else G0_gray)
+                draw(image, (x - X_start,y - Y_start),(X - X_start,Y - Y_start), pixel_intensity(S if S is not None else G0_gray))
             x = X
             y = Y
 
