@@ -59,7 +59,6 @@ def gcode2image(args) -> np.array:
         slope = line_slope(start, end)
         offset = line_offset(start, end)
 
-        #print(f"DRAW: start {start}, end {end}, color {color}")
         if slope == 1 and ((start[0] - end[0]) != (start[1] - end[1])):
             # vertical line (not a 45 degrees line)
             diy = 1 if end[1] > start[1] else -1
@@ -77,7 +76,6 @@ def gcode2image(args) -> np.array:
                 if abs(y - prev[1]) > 1:
                     di = 1 if y > prev[1] else -1
                     for y1 in range(prev[1], y, di):
-                        #print("y1:",(x,y1))
                         if img[y1,x] != 255:
                             img[y1,x] = max(img[y1,x] - color, 0)
                         else:
@@ -88,7 +86,6 @@ def gcode2image(args) -> np.array:
                         img[y,x] = max(img[y,x] - color, 0)
                     else:
                         img[y,x] = color
-                #print("draw:",(x,y))
 
                 prev = (x,y)
 
