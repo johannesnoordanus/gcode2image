@@ -21,7 +21,7 @@ This generates a 1 cm (per axis) grid and shows the origin X0Y0.
 Please consider supporting me, so I can make this application better and add new functionality to it: <http://paypal.me/johannesnoordanus/5,00>
 
 ### Install:
-Depends on python libraries numpy, PIL and skimage.
+Depends on python libraries numpy and PIL.
 *pip install* takes care of that.
 ```
 > pip install gcode2image
