@@ -2,8 +2,8 @@
 
 Commanline tool to convert gcode to pixel exact image files.
 
-This 2D viewer - images are 2D (so no Z coordinates) - has as strong points that it shows gray levels and thus is able to show a realistic representation of laser engravings. Images can be viewed while converting and the exact placing and size of the gcode can be shown.
-It is also possible to show movement *G0* code.
+This 2D viewer - images are 2D (no Z coordinates) - has as strong points that it shows gray levels and thus is able to show a realistic representation of laser engravings. Images can be viewed while converting gcode and the exact placing and size of the gcode can be shown. Since version 2.4.0 repeated writes to the same pixel locations are shown. This means that the simulated engraving is pretty close to actual laser engraving.
+It is also possible to show speed movement *G0* code.
 
 A typical command:
 ```gcode2image --showimage --flip test.gc test.png```
