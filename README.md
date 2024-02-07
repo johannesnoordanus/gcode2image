@@ -2,7 +2,7 @@
 
 Commanline tool to convert gcode to pixel exact image files.
 
-This 2D viewer - images are 2D (no Z coordinates) - has as strong points that it shows gray levels and thus is able to show a realistic representation of laser engravings. Images can be viewed while converting gcode and the exact placing and size of the gcode can be shown. Since version 2.4.0 repeated writes to the same pixel locations are shown. This means that the simulated engraving is pretty close to actual laser engraving.
+This 2D viewer - images are 2D (no Z coordinates) - has as strong points that it shows gray levels and thus is able to show a realistic representation of laser engravings. Images can be viewed while converting gcode and the exact placing and size of the gcode can be shown. Since version 2.4.0 repeated writes to the same pixel locations can be shown (option --incremental). This means that the simulated engraving is pretty close to actual laser engraving.
 It is also possible to show speed movement *G0* code.
 
 A typical command:
@@ -26,10 +26,15 @@ Depends on python libraries numpy and PIL.
 ```
 > pip install gcode2image
 ```
+Note that some managed linux distributions do not allow system wide installs using *pip*, in that case use *pipx*:
+```
+> pipx install gcode2image
+```
 ### Usage:
 ```
 $ gcode2image --help
-usage: gcode2image [-h] [--resolution <default: 0.1>] [--maxintensity <default: 255>] [--showimage] [--showG0] [--showorigin] [--flip] [--grid] [-V] gcode image
+usage: gcode2image [-h] [--resolution <default: 0.1>] [--maxintensity <default: 255>] [--showimage] [--showG0] [--showorigin] [--flip] [--grid] [--incremental] [-V]
+                   gcode image
 
 Convert a gcode file to image.
 
@@ -48,6 +53,7 @@ options:
   --showorigin          show image origin (0,0)
   --flip                flip image updown
   --grid                show a grid 10mm wide
+  --incremental         show incremental burns
   -V, --version         show version number and exit
 ```
 ### Example:

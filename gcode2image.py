@@ -2,7 +2,7 @@
 """
 gcode2image: convert gcode to image.
 """
-__version__ = "2.4.0"
+__version__ = "2.4.2"
 
 import sys
 import re
@@ -35,6 +35,11 @@ def gcode2image(args) -> np.array:
 
     invert_intensity = True
 
+    cummulative = False
+    if 'incremental' in vars(args):
+        cummulative = args.incremental
+
+
     def line_slope(p1: (int,int), p2: (int,int)):
         """Calculate the slope of the line p1p2"""
         x1, y1 = p1[0], p1[1]
@@ -56,38 +61,43 @@ def gcode2image(args) -> np.array:
         return round(y)
 
     def draw(img, start: (int,int), end: (int,int), color):
+        """
+        Draw a line from 'start' (x,y) to one point short of 'end' (x,y)
+        """
         slope = line_slope(start, end)
         offset = line_offset(start, end)
 
-        if slope == 1 and ((start[0] - end[0]) != (start[1] - end[1])):
-            # vertical line (not a 45 degrees line)
-            diy = 1 if end[1] > start[1] else -1
-            for y2 in range(start[1], end[1] + diy, diy):
-                if img[y2,start[0]] != 255:
-                    img[y2,start[0]] = max(img[y2,start[0]] - color, 0)
-                else:
-                    img[y2,start[0]] = color
-        else:
-            # non vertical line
-            dix = 1 if end[0] > start[0] else -1
-            prev = start
-            for x in range(start[0], end[0] + dix, dix):
-                y = line(x,slope,offset)
-                if abs(y - prev[1]) > 1:
-                    di = 1 if y > prev[1] else -1
-                    for y1 in range(prev[1], y, di):
-                        if img[y1,x] != 255:
-                            img[y1,x] = max(img[y1,x] - color, 0)
-                        else:
-                            img[y1,x] = color
-
-                if x != end[0]:
-                    if img[y,x] != 255:
-                        img[y,x] = max(img[y,x] - color, 0)
+        if color != 255:
+            # write non white colors
+            if slope == 1 and ((start[0] - end[0]) != (start[1] - end[1])):
+                # vertical line (not a 45 degrees line)
+                diy = 1 if end[1] > start[1] else -1
+                for y2 in range(start[1], end[1] + diy, diy):
+                    if cummulative and img[y2,start[0]] != 255:
+                        img[y2,start[0]] = max(img[y2,start[0]] - color, 0)
                     else:
-                        img[y,x] = color
+                        img[y2,start[0]] = color
+            else:
+                # non vertical line
+                dix = 1 if end[0] > start[0] else -1
+                prev = start
+                for x in range(start[0], end[0] + dix, dix):
+                    y = line(x,slope,offset)
+                    if abs(y - prev[1]) > 1:
+                        di = 1 if y > prev[1] else -1
+                        for y1 in range(prev[1], y, di):
+                            if cummulative and  img[y1,x] != 255:
+                                img[y1,x] = max(img[y1,x] - color, 0)
+                            else:
+                                img[y1,x] = color
 
-                prev = (x,y)
+                    if x != end[0]:
+                        if cummulative and img[y,x] != 255:
+                            img[y,x] = max(img[y,x] - color, 0)
+                        else:
+                            img[y,x] = color
+
+                    prev = (x,y)
 
     def pixel_range(ra, dY, dX, pixelsize, img_height, img_width):
         """
@@ -449,6 +459,7 @@ def main() -> int:
     parser.add_argument('--showorigin', action='store_true', default=False, help='show image origin (0,0)' )
     parser.add_argument('--flip', action='store_true', default=False, help='flip image updown' )
     parser.add_argument('--grid', action='store_true', default=False, help='show a grid 10mm wide' )
+    parser.add_argument('--incremental', action='store_true', default=False, help='show incremental burns' )
     parser.add_argument('-V', '--version', action='version', version='%(prog)s ' + __version__, help="show version number and exit")
     args = parser.parse_args()
 
