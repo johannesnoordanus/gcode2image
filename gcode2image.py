@@ -2,7 +2,7 @@
 """
 gcode2image: convert gcode to image.
 """
-__version__ = "2.4.4"
+__version__ = "2.4.5"
 
 import sys
 import re
@@ -25,7 +25,7 @@ def gcode2image(args) -> np.array:
     # set args
     gcode = args.gcode
 
-    float_pattern = "[+\-]?[0-9]+(\.[0-9]+)?"
+    float_pattern = r"[+\-]?[0-9]+(\.[0-9]+)?"
 
     X_pattern = f"X{float_pattern}"
     Y_pattern = f"Y{float_pattern}"
@@ -248,7 +248,7 @@ def gcode2image(args) -> np.array:
 
     def get_gcode_info():
         nonlocal gcode
-        gc_info = { 'min_X': None, 'min_Y': None, 'max_X': None, 'max_Y': None, 'max_S': None, 'pixelsize': None, 'M': None, 'max_laser_power': None }
+        gc_info = { 'min_X': None, 'min_Y': None, 'max_X': None, 'max_Y': None, 'max_S': None, 'pixelsize': None, 'M': None, 'max_image_laser_power': None }
 
         while True:
             line = gcode.readline()
@@ -289,7 +289,7 @@ def gcode2image(args) -> np.array:
                 max_laser_power = re.search(f"^;.*maximum_image_laser_power:? +{float_pattern}", line)
                 if max_laser_power:
                     max_laser_power = re.search(f"maximum_image_laser_power:? +{float_pattern}", max_laser_power.group()).group()
-                    gc_info['max_laser_power'] = float(re.search(f"{float_pattern}", max_laser_power).group())
+                    gc_info['max_image_laser_power'] = float(re.search(f"{float_pattern}", max_laser_power).group())
 
         return gc_info
 
@@ -319,18 +319,15 @@ def gcode2image(args) -> np.array:
 
     # handle pixel intensity
     if args.maxintensity is not None:
+        # commandline setting is followed
         max_laser_power = args.maxintensity
-    elif gc_info['max_laser_power']:
-        max_laser_power = gc_info['max_laser_power']
-        print(f"maxintensity is set to {max_laser_power} (found within '{args.gcode.name}')")
     else:
-        max_S = gc_info['max_S']
-        if max_S and max_S > DEFAULT_MAX_LASER_POWER:
-            # self calibrate
-            max_laser_power = max_S
-        else:
-            max_laser_power = DEFAULT_MAX_LASER_POWER
-        print(f"maxintensity is set to {max_laser_power} (option '--maxintensity' is not supplied or found in '{args.gcode.name}')")
+        max_laser_power = DEFAULT_MAX_LASER_POWER
+        if gc_info['max_image_laser_power']:
+            max_laser_power = gc_info['max_image_laser_power']
+        if gc_info['max_S'] and gc_info['max_S'] > max_laser_power:
+            max_laser_power = gc_info['max_S']
+    print(f"maxintensity is set to {max_laser_power}")
 
     # handle missing G1 and M3(4) commands
     M = gc_info['M']
