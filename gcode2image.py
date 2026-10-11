@@ -2,13 +2,26 @@
 """
 gcode2image: convert gcode to image.
 """
-__version__ = "2.4.5"
+__version__ = "2.4.6"
 
 import sys
 import re
 import argparse
 from PIL import Image
+from pathlib import Path
 import numpy as np
+
+def ext_check(expected_extension, openner):
+    def extension(filename):
+        suffixes = expected_extension.split(',')
+
+        for suffix in suffixes:
+            if filename.lower().endswith(suffix):
+                return openner(filename)
+
+        print(f"Error: unknown file extension '{Path(filename).suffix}', file extension should be one of {suffixes}, exit ...")
+        sys.exit(1)
+    return extension
 
 # set to 10 pixels per mm
 DEFAULT_RESOLUTION = .1
@@ -301,7 +314,7 @@ def gcode2image(args) -> np.array:
     gc_info = get_gcode_info()
 
     if gc_info['min_X'] is None or gc_info['min_Y'] is None or gc_info['max_X'] is None or gc_info['max_Y'] is None:
-        print(f"Error: gcode file not well formed: missing move commands (X<nr> and or Y<nr> coordinates), exit ...")
+        print(f"Error: cannot detect gcode, wrong file type?, exit ...")
         sys.exit(1)
 
     # handle resolution
@@ -445,8 +458,8 @@ def main() -> int:
 
     # Define command line argument interface
     parser = argparse.ArgumentParser(description='Convert a gcode file to image.')
-    parser.add_argument('gcode', type=argparse.FileType('r'), default = sys.stdin, help='name of gcode file to convert')
-    parser.add_argument('image', type=argparse.FileType('w'), help='image out')
+    parser.add_argument('gcode', type=ext_check('.gc,.gcode', argparse.FileType('r')), default = sys.stdin, help='name of gcode file to convert')
+    parser.add_argument('image', type=ext_check('.png,.jpg,.jpeg', argparse.FileType('w')), help='image out')
     parser.add_argument('--resolution', default=pixelsize_default, metavar=f"<default: {DEFAULT_RESOLUTION}>",
         type=float, help="define image resolution by pixel size (mm^2)")
     parser.add_argument('--maxintensity', default=max_laser_power_default, metavar=f"<default: {DEFAULT_MAX_LASER_POWER}>",
